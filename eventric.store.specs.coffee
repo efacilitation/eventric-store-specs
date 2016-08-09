@@ -25,15 +25,13 @@ module.exports =
           initializeCallback store
 
 
-        it 'should save the domain event', (done) ->
+        it 'should save the domain event', ->
           sampleDomainEvent = name: 'SomethingHappened'
           store.saveDomainEvent sampleDomainEvent
           .then ->
             store.findDomainEventsByName 'SomethingHappened', (error, domainEvents) ->
               expect(domainEvents.length).to.equal 1
               expect(domainEvents[0].name).to.equal sampleDomainEvent.name
-              done()
-          .catch done
 
 
         it 'should resolve with the saved domain event which has a domain event id', ->
@@ -67,6 +65,7 @@ module.exports =
               expect(domainEvents[0].name).to.equal domainEvent.name
               done()
           .catch done
+          return
 
 
         it 'should call back without domain events with another name', (done) ->
@@ -77,6 +76,7 @@ module.exports =
               expect(domainEvents.length).to.equal 0
               done()
           .catch done
+          return
 
 
         it 'should call back with domain events matching any name given an array of names', (done) ->
@@ -93,6 +93,7 @@ module.exports =
               expect(domainEvents[1].name).to.equal domainEvent2.name
               done()
           .catch done
+          return
 
 
       describe '#findDomainEventsByAggregateId', ->
@@ -110,6 +111,7 @@ module.exports =
               expect(domainEvents[0].name).to.equal domainEvent.name
               done()
           .catch done
+          return
 
 
         it 'should call back without domain events with another aggregate id', (done) ->
@@ -120,6 +122,7 @@ module.exports =
               expect(domainEvents.length).to.equal 0
               done()
           .catch done
+          return
 
 
         it 'should call back with domain events matching any aggregrate id given an array of aggregate ids', (done) ->
@@ -136,6 +139,7 @@ module.exports =
               expect(domainEvents[1].name).to.equal domainEvent2.name
               done()
           .catch done
+          return
 
 
       describe '#findDomainEventsByNameAndAggregateId', ->
@@ -155,6 +159,7 @@ module.exports =
               expect(domainEvents[0].name).to.equal domainEvent.name
               done()
           .catch done
+          return
 
 
         it 'should call back without domain events with another aggregate id or name', (done) ->
@@ -173,6 +178,7 @@ module.exports =
               expect(domainEvents.length).to.equal 0
               done()
           .catch done
+          return
 
 
         it 'should call back with all domain events matching any name and the aggregate id given an array of names', (done) ->
@@ -194,6 +200,7 @@ module.exports =
               expect(domainEvents[1].name).to.equal domainEvent2.name
               done()
           .catch done
+          return
 
 
         it 'should call back with all domain events matching the name and any aggregate id given an array of ids', (done) ->
@@ -214,3 +221,5 @@ module.exports =
               expect(domainEvents[1].name).to.equal domainEvent2.name
               done()
           .catch done
+          return
+
