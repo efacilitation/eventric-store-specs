@@ -46,6 +46,7 @@ module.exports =
             saveDomainEventPromises.push store.saveDomainEvent {}
           Promise.all saveDomainEventPromises
           .then (domainEvents) ->
+            domainEvents.sort (a, b) -> return a.id - b.id
             domainEvents.map((domainEvent) -> domainEvent.id).forEach (domainEventId, index) ->
               expect(domainEventId).to.equal index + 1
 
@@ -82,10 +83,9 @@ module.exports =
         it 'should call back with domain events matching any name given an array of names', (done) ->
           domainEvent1 = name: 'SomethingHappened'
           domainEvent2 = name: 'SomethingElseHappened'
-          Promise.all [
-            store.saveDomainEvent domainEvent1
+          store.saveDomainEvent domainEvent1
+          .then ->
             store.saveDomainEvent domainEvent2
-          ]
           .then ->
             store.findDomainEventsByName ['SomethingHappened', 'SomethingElseHappened'], (error, domainEvents) ->
               expect(domainEvents.length).to.equal 2
@@ -128,10 +128,9 @@ module.exports =
         it 'should call back with domain events matching any aggregrate id given an array of aggregate ids', (done) ->
           domainEvent1 = aggregate: id: 42
           domainEvent2 = aggregate: id: 43
-          Promise.all [
-            store.saveDomainEvent domainEvent1
+          store.saveDomainEvent domainEvent1
+          .then ->
             store.saveDomainEvent domainEvent2
-          ]
           .then ->
             store.findDomainEventsByAggregateId [42, 43], (error, domainEvents) ->
               expect(domainEvents.length).to.equal 2
@@ -169,10 +168,9 @@ module.exports =
           domainEvent2 =
             name: 'SomethingHappened'
             aggregate: id: 43
-          Promise.all [
-            store.saveDomainEvent domainEvent1
+          store.saveDomainEvent domainEvent1
+          .then ->
             store.saveDomainEvent domainEvent2
-          ]
           .then ->
             store.findDomainEventsByNameAndAggregateId 'SomethingHappened', 42, (error, domainEvents) ->
               expect(domainEvents.length).to.equal 0
@@ -188,10 +186,9 @@ module.exports =
           domainEvent2 =
             name: 'SomethingElseHappened'
             aggregate: id: 42
-          Promise.all [
-            store.saveDomainEvent domainEvent1
+          store.saveDomainEvent domainEvent1
+          .then ->
             store.saveDomainEvent domainEvent2
-          ]
           .then ->
             store.findDomainEventsByNameAndAggregateId ['SomethingHappened', 'SomethingElseHappened'], 42,
             (error, domainEvents) ->
@@ -210,10 +207,9 @@ module.exports =
           domainEvent2 =
             name: 'SomethingHappened'
             aggregate: id: 43
-          Promise.all [
-            store.saveDomainEvent domainEvent1
+          store.saveDomainEvent domainEvent1
+          .then ->
             store.saveDomainEvent domainEvent2
-          ]
           .then ->
             store.findDomainEventsByNameAndAggregateId 'SomethingHappened', [42, 43], (error, domainEvents) ->
               expect(domainEvents.length).to.equal 2
