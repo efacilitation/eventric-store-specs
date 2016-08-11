@@ -1,79 +1,93 @@
+require('es6-promise').polyfill()
+global.chai = require 'chai'
+global.expect = chai.expect
+global.sinon = require 'sinon'
+global.sandbox = sinon.sandbox.create()
+global.sinonChai = require 'sinon-chai'
+chai.use sinonChai
+
 module.exports =
-  runFor: ({StoreClass, initializeCallback}) ->
-    describe 'eventric store specs', ->
+  runFor: ({StoreClass, options}) ->
+    options ?= {}
+
+    describe 'Eventric store', ->
+      firstDomainEventFake = null
+      secondDomainEventFake = null
       store = null
 
       beforeEach ->
+        contextFake =
+          name: 'contextFake'
+
+        firstDomainEventFake =
+          name: 'FirstEvent'
+          aggregate:
+            id: 42
+
+        secondDomainEventFake =
+          name: 'SecondEvent'
+          aggregate:
+            id: 43
+
         store = new StoreClass()
-
-
-      afterEach ->
-        sandbox.restore()
-
-
-      describe '#initialize', ->
-
-        it 'should resolve without an error', ->
-          initializePromise = initializeCallback store
-          .then ->
-            expect(initializePromise).to.be.ok
+        store.initialize contextFake, options
 
 
       describe '#saveDomainEvent', ->
 
-        beforeEach ->
-          initializeCallback store
-
-
         it 'should save the domain event', ->
-          sampleDomainEvent = name: 'SomethingHappened'
-          store.saveDomainEvent sampleDomainEvent
+          store.saveDomainEvent firstDomainEventFake
           .then ->
-            store.findDomainEventsByName 'SomethingHappened', (error, domainEvents) ->
+            store.findDomainEventsByName firstDomainEventFake.name, (error, domainEvents) ->
               expect(domainEvents.length).to.equal 1
-              expect(domainEvents[0].name).to.equal sampleDomainEvent.name
+              expect(domainEvents[0].name).to.equal firstDomainEventFake.name
 
 
-        it 'should resolve with the saved domain event which has a domain event id', ->
-          store.saveDomainEvent {}
+        it 'should resolve with the saved domain event', ->
+          store.saveDomainEvent firstDomainEventFake
           .then (savedDomainEvent) ->
-            expect(savedDomainEvent.id).to.be.an.integer
+            expect(savedDomainEvent).to.be.ok
 
 
-        it 'should assign an ascending integer to each saved domain as id', ->
-          saveDomainEventPromises = []
-          for i in [0...3]
-            saveDomainEventPromises.push store.saveDomainEvent {}
-          Promise.all saveDomainEventPromises
-          .then (domainEvents) ->
-            domainEvents.sort (a, b) -> return a.id - b.id
-            domainEvents.map((domainEvent) -> domainEvent.id).forEach (domainEventId, index) ->
-              expect(domainEventId).to.equal index + 1
+        it 'should assign an ascending integer as id', ->
+          store.saveDomainEvent firstDomainEventFake
+          .then (savedDomainEvent) ->
+            expect(savedDomainEvent.id).to.equal 1
+
+
+        it 'should assign an ascending integer as id to each saved domain in correct order', ->
+          thirdDomainEventFake =
+            name: 'ThirdEvent'
+            aggregate:
+              id: 44
+          store.saveDomainEvent firstDomainEventFake
+          .then (firstDomainEvent) ->
+            store.saveDomainEvent secondDomainEventFake
+            .then (secondDomainEvent) ->
+              store.saveDomainEvent thirdDomainEventFake
+              .then (thirdDomainEvent) ->
+                expect(firstDomainEvent.id).to.equal 1
+                expect(secondDomainEvent.id).to.equal 2
+                expect(thirdDomainEvent.id).to.equal 3
 
 
       describe '#findDomainEventsByName', ->
 
-        beforeEach ->
-          initializeCallback store
-
-
-        it 'should call back with domain events with a matching name', (done) ->
-          domainEvent = name: 'SomethingHappened'
-          store.saveDomainEvent domainEvent
+        it 'should call back with domain events with matching name', (done) ->
+          store.saveDomainEvent firstDomainEventFake
           .then ->
-            store.findDomainEventsByName 'SomethingHappened', (error, domainEvents) ->
+            store.findDomainEventsByName firstDomainEventFake.name, (error, domainEvents) ->
               expect(domainEvents.length).to.equal 1
-              expect(domainEvents[0].name).to.equal domainEvent.name
+              expect(domainEvents[0].name).to.equal firstDomainEventFake.name
               done()
           .catch done
           return
 
 
         it 'should call back without domain events with another name', (done) ->
-          domainEvent = name: 'SomethingElseHappened'
-          store.saveDomainEvent domainEvent
+          store.saveDomainEvent firstDomainEventFake
           .then ->
-            store.findDomainEventsByName 'SomethingHappened', (error, domainEvents) ->
+            store.findDomainEventsByName secondDomainEventFake.name, (error, domainEvents) ->
               expect(domainEvents.length).to.equal 0
               done()
           .catch done
@@ -81,16 +95,14 @@ module.exports =
 
 
         it 'should call back with domain events matching any name given an array of names', (done) ->
-          domainEvent1 = name: 'SomethingHappened'
-          domainEvent2 = name: 'SomethingElseHappened'
-          store.saveDomainEvent domainEvent1
+          store.saveDomainEvent firstDomainEventFake
           .then ->
-            store.saveDomainEvent domainEvent2
+            store.saveDomainEvent secondDomainEventFake
           .then ->
-            store.findDomainEventsByName ['SomethingHappened', 'SomethingElseHappened'], (error, domainEvents) ->
+            store.findDomainEventsByName [firstDomainEventFake.name, secondDomainEventFake.name], (error, domainEvents) ->
               expect(domainEvents.length).to.equal 2
-              expect(domainEvents[0].name).to.equal domainEvent1.name
-              expect(domainEvents[1].name).to.equal domainEvent2.name
+              expect(domainEvents[0].name).to.equal firstDomainEventFake.name
+              expect(domainEvents[1].name).to.equal secondDomainEventFake.name
               done()
           .catch done
           return
@@ -98,27 +110,21 @@ module.exports =
 
       describe '#findDomainEventsByAggregateId', ->
 
-        beforeEach ->
-          initializeCallback store
-
-
-        it 'should call back with domain events with a matching aggregate id', (done) ->
-          domainEvent = aggregate: id: 42
-          store.saveDomainEvent domainEvent
+        it 'should call back with domain events with matching aggregate id', (done) ->
+          store.saveDomainEvent firstDomainEventFake
           .then ->
-            store.findDomainEventsByAggregateId 42, (error, domainEvents) ->
+            store.findDomainEventsByAggregateId firstDomainEventFake.aggregate.id, (error, domainEvents) ->
               expect(domainEvents.length).to.equal 1
-              expect(domainEvents[0].name).to.equal domainEvent.name
+              expect(domainEvents[0].name).to.equal firstDomainEventFake.name
               done()
           .catch done
           return
 
 
         it 'should call back without domain events with another aggregate id', (done) ->
-          domainEvent = aggregate: id: 43
-          store.saveDomainEvent domainEvent
+          store.saveDomainEvent firstDomainEventFake
           .then ->
-            store.findDomainEventsByAggregateId 42, (error, domainEvents) ->
+            store.findDomainEventsByAggregateId secondDomainEventFake.aggregate.id, (error, domainEvents) ->
               expect(domainEvents.length).to.equal 0
               done()
           .catch done
@@ -126,96 +132,74 @@ module.exports =
 
 
         it 'should call back with domain events matching any aggregrate id given an array of aggregate ids', (done) ->
-          domainEvent1 = aggregate: id: 42
-          domainEvent2 = aggregate: id: 43
-          store.saveDomainEvent domainEvent1
+          store.saveDomainEvent firstDomainEventFake
           .then ->
-            store.saveDomainEvent domainEvent2
+            store.saveDomainEvent secondDomainEventFake
           .then ->
-            store.findDomainEventsByAggregateId [42, 43], (error, domainEvents) ->
-              expect(domainEvents.length).to.equal 2
-              expect(domainEvents[0].name).to.equal domainEvent1.name
-              expect(domainEvents[1].name).to.equal domainEvent2.name
-              done()
+            store.findDomainEventsByAggregateId [firstDomainEventFake.aggregate.id, secondDomainEventFake.aggregate.id],
+              (error, domainEvents) ->
+                expect(domainEvents.length).to.equal 2
+                expect(domainEvents[0].name).to.equal firstDomainEventFake.name
+                expect(domainEvents[1].name).to.equal secondDomainEventFake.name
+                done()
           .catch done
           return
 
 
       describe '#findDomainEventsByNameAndAggregateId', ->
 
-        beforeEach ->
-          initializeCallback store
-
-
         it 'should call back with domain events with a matching aggregate id and a matching name', (done) ->
-          domainEvent =
-            name: 'SomethingHappened'
-            aggregate: id: 42
-          store.saveDomainEvent domainEvent
+          store.saveDomainEvent firstDomainEventFake
           .then ->
-            store.findDomainEventsByNameAndAggregateId 'SomethingHappened', 42, (error, domainEvents) ->
-              expect(domainEvents.length).to.equal 1
-              expect(domainEvents[0].name).to.equal domainEvent.name
-              done()
+            store.findDomainEventsByNameAndAggregateId firstDomainEventFake.name,
+              firstDomainEventFake.aggregate.id, (error, domainEvents) ->
+                expect(domainEvents.length).to.equal 1
+                expect(domainEvents[0].name).to.equal firstDomainEventFake.name
+                done()
           .catch done
           return
 
 
         it 'should call back without domain events with another aggregate id or name', (done) ->
-          domainEvent1 =
-            name: 'SomethingElseHappened'
-            aggregate: id: 42
-          domainEvent2 =
-            name: 'SomethingHappened'
-            aggregate: id: 43
-          store.saveDomainEvent domainEvent1
+          store.saveDomainEvent firstDomainEventFake
           .then ->
-            store.saveDomainEvent domainEvent2
+            store.saveDomainEvent secondDomainEventFake
           .then ->
-            store.findDomainEventsByNameAndAggregateId 'SomethingHappened', 42, (error, domainEvents) ->
-              expect(domainEvents.length).to.equal 0
-              done()
+            store.findDomainEventsByNameAndAggregateId firstDomainEventFake.name,
+              secondDomainEventFake.aggregate.id, (error, domainEvents) ->
+                expect(domainEvents.length).to.equal 0
+                done()
           .catch done
           return
 
 
         it 'should call back with all domain events matching any name and the aggregate id given an array of names', (done) ->
-          domainEvent1 =
-            name: 'SomethingHappened'
-            aggregate: id: 42
-          domainEvent2 =
-            name: 'SomethingElseHappened'
-            aggregate: id: 42
-          store.saveDomainEvent domainEvent1
+          secondDomainEventFake.aggregate.id = 42
+          store.saveDomainEvent firstDomainEventFake
           .then ->
-            store.saveDomainEvent domainEvent2
+            store.saveDomainEvent secondDomainEventFake
           .then ->
-            store.findDomainEventsByNameAndAggregateId ['SomethingHappened', 'SomethingElseHappened'], 42,
-            (error, domainEvents) ->
-              expect(domainEvents.length).to.equal 2
-              expect(domainEvents[0].name).to.equal domainEvent1.name
-              expect(domainEvents[1].name).to.equal domainEvent2.name
-              done()
+            store.findDomainEventsByNameAndAggregateId [firstDomainEventFake.name, secondDomainEventFake.name],
+              firstDomainEventFake.aggregate.id, (error, domainEvents) ->
+                expect(domainEvents.length).to.equal 2
+                expect(domainEvents[0].name).to.equal firstDomainEventFake.name
+                expect(domainEvents[1].name).to.equal secondDomainEventFake.name
+                done()
           .catch done
           return
 
 
         it 'should call back with all domain events matching the name and any aggregate id given an array of ids', (done) ->
-          domainEvent1 =
-            name: 'SomethingHappened'
-            aggregate: id: 42
-          domainEvent2 =
-            name: 'SomethingHappened'
-            aggregate: id: 43
-          store.saveDomainEvent domainEvent1
+          secondDomainEventFake.name = 'FirstEvent'
+          store.saveDomainEvent firstDomainEventFake
           .then ->
-            store.saveDomainEvent domainEvent2
+            store.saveDomainEvent secondDomainEventFake
           .then ->
-            store.findDomainEventsByNameAndAggregateId 'SomethingHappened', [42, 43], (error, domainEvents) ->
-              expect(domainEvents.length).to.equal 2
-              expect(domainEvents[0].name).to.equal domainEvent1.name
-              expect(domainEvents[1].name).to.equal domainEvent2.name
-              done()
+            store.findDomainEventsByNameAndAggregateId firstDomainEventFake.name,
+              [firstDomainEventFake.aggregate.id, secondDomainEventFake.aggregate.id], (error, domainEvents) ->
+                expect(domainEvents.length).to.equal 2
+                expect(domainEvents[0].name).to.equal firstDomainEventFake.name
+                expect(domainEvents[1].name).to.equal secondDomainEventFake.name
+                done()
           .catch done
           return
-

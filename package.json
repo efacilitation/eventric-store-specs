@@ -1,15 +1,28 @@
 {
   "name": "eventric-store-specs",
-  "author": "eFa Team <team@efa-gmbh.com>",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "This repository contains the specs for the interface of eventric stores, i.e. the inmemory store implementation inside eventric (https://github.com/efacilitation/eventric/tree/master/src/store/inmemory) and the mongodb store implementation (https://github.com/efacilitation/eventric-store-mongodb).",
   "main": "index.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/efacilitation/eventric-store-specs.git"
   },
+  "keywords": [
+    "eventric",
+    "eventric-store",
+    "eventric-specs"
+  ],
   "dependencies": {
-    "coffee-script": "1.10.0"
+    "coffee-script": "1.10.0",
+    "chai": "3.5.0",
+    "es6-promise": "3.2.1",
+    "sinon": "1.17.5",
+    "sinon-chai": "2.8.0"
   },
-  "license": "MIT"
+  "author": "efa-GmbH <team@efa-gmbh.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/efacilitation/eventric-store-specs/issues"
+  },
+  "homepage": "https://github.com/efacilitation/eventric-store-specs#readme"
 }
