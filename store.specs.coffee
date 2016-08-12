@@ -17,7 +17,7 @@ module.exports =
 
       beforeEach ->
         contextFake =
-          name: 'contextFake'
+          name: 'ContextFake'
 
         firstDomainEventFake =
           name: 'FirstEvent'
@@ -33,6 +33,10 @@ module.exports =
         store.initialize contextFake, options
 
 
+      afterEach ->
+        store.destroy()
+
+
       describe '#saveDomainEvent', ->
 
         it 'should save the domain event', ->
@@ -45,14 +49,14 @@ module.exports =
 
         it 'should resolve with the saved domain event', ->
           store.saveDomainEvent firstDomainEventFake
-          .then (savedDomainEvent) ->
-            expect(savedDomainEvent).to.be.ok
+          .then (domainEvent) ->
+            expect(domainEvent).to.be.ok
 
 
         it 'should assign an ascending integer as id', ->
           store.saveDomainEvent firstDomainEventFake
-          .then (savedDomainEvent) ->
-            expect(savedDomainEvent.id).to.equal 1
+          .then (domainEvent) ->
+            expect(domainEvent.id).to.equal 1
 
 
         it 'should assign an ascending integer as id to each saved domain in correct order', ->
@@ -69,6 +73,22 @@ module.exports =
                 expect(firstDomainEvent.id).to.equal 1
                 expect(secondDomainEvent.id).to.equal 2
                 expect(thirdDomainEvent.id).to.equal 3
+
+
+        it 'should assign an ascending integer as id across all store instances', ->
+          secondContextFake =
+            name: 'SecondContextFake'
+          secondStore = new StoreClass()
+          secondStore.initialize secondContextFake, options
+          .then ->
+            store.saveDomainEvent firstDomainEventFake
+          .then (firstDomainEvent) ->
+            secondStore.saveDomainEvent secondDomainEventFake
+            .then (secondDomainEvent) ->
+              secondStore.destroy()
+              expect(firstDomainEvent.id).to.equal 1
+              expect(secondDomainEvent.id).to.equal 2
+
 
 
       describe '#findDomainEventsByName', ->
@@ -203,3 +223,9 @@ module.exports =
                 done()
           .catch done
           return
+
+
+      describe '#destroy', ->
+
+        it 'should return a promise', ->
+          expect(store.destroy()).to.be.instanceOf Promise
